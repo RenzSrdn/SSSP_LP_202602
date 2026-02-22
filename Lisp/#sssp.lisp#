@@ -7,9 +7,9 @@
 (defun is-graph (graph-id) ;controlla se un grafo esiste
   (gethash graph-id *graphs*)) ;se esiste ritorna graph-id, altrimenti NIL ;gethash cerca la chiave nella hash table
 
-(defun new-graph (graph-id) ;se il grafo non esiste, lo crea e lo inserisce in graphs
-  (or (gethash graph-id *graphs*) ;altrimenti ritorna graph-id
-      (setf (gethash graph-id *graphs*) graph-id)))
+(defun new-graph (graph-id) ;creazione grafo
+  (or (gethash graph-id *graphs*) ;se il grafo esiste, ritorna quello esistente
+      (setf (gethash graph-id *graphs*) graph-id))) ;altrimenti, lo crea
 
 (defun delete-graph (graph-id) ;elimina completamente un grafo
   (remhash graph-id *graphs*) ;rimuove il grafo dalla hash table
