@@ -14,21 +14,29 @@
 (defun delete-graph (graph-id) ;elimina completamente un grafo
   (remhash graph-id *graphs*) ;rimuove il grafo dalla hash table
 
-  (maphash ;elimina i vertici appartenenti al grafo da eliminare ;maphash itera su tutta la hash table
-   (lambda (key value)
-     (when (and (equal (first key) 'vertex)
-                (equal (second key) graph-id))
-       (remhash key *vertices*)))
-   *vertices*)
+  (let (keys-to-remove) ;rimozione vertici appartenenti al grafo
+    (maphash
+     (lambda (key value)
+       (declare (ignore value))
+       (when (and (equal (first key) 'vertex)
+                  (equal (second key) graph-id))
+         (push key keys-to-remove)))
+     *vertices*)
+    (dolist (k keys-to-remove)
+      (remhash k *vertices*)))
 
-  (maphash ;elimina gli archi appartenenti al grafo da eliminare
-   (lambda (key value)
-     (when (and (equal (first key) 'arc)
-                (equal (second key) graph-id))
-       (remhash key *arcs*)))
-   *arcs*)
+  (let (keys-to-remove) ;rimozione archi appartenenti al grafo
+    (maphash
+     (lambda (key value)
+       (declare (ignore value))
+       (when (and (equal (first key) 'arc)
+                  (equal (second key) graph-id))
+         (push key keys-to-remove)))
+     *arcs*)
+    (dolist (k keys-to-remove)
+      (remhash k *arcs*)))
 
-  nil) ;ritorna NIL
+  nil)
 
 ;VERTICI
 (defun new-vertex (graph-id vertex-id) ;aggiunge un vertice
@@ -46,7 +54,7 @@
                   (equal (second key) graph-id))
          (push value result)))
      *vertices*)
-    result))
+    (nreverse result)))
 
 ;ARCHI
 (defun new-arc (graph-id u v &optional (weight 1)) ;aggiunge un arco
@@ -64,7 +72,7 @@
                   (equal (second key) graph-id))
          (push value result)))
      *arcs*)
-    result))
+    (nreverse result)))
 
 (defun graph-vertex-neighbors (graph-id vertex-id) ;restituisce tutti gli archi uscenti da un vertice
   (let (result)
@@ -75,7 +83,7 @@
                   (equal (third key) vertex-id))
          (push value result)))
      *arcs*)
-    result))
+    nreverse result)))
 
 ;STAMPA
 (defun graph-print (graph-id) ;stampa il grafo
