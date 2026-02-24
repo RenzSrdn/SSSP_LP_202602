@@ -1,0 +1,229 @@
+;;; ============================================================
+;;; TEST SUITE - Graphs
+;;; ============================================================
+
+;;; --- SETUP: reset hash tables prima dei test ---
+(clrhash *graphs*)
+(clrhash *vertices*)
+(clrhash *arcs*)
+
+;;; ============================================================
+;;; BLOCCO 1: new-graph / is-graph
+;;; ============================================================
+
+(new-graph 'g1)
+;;; => G1
+
+(new-graph 'g1)
+;;; => G1  (idempotente: non crea un duplicato)
+
+(new-graph 'g2)
+;;; => G2
+
+(is-graph 'g1)
+;;; => G1  (truthy: il grafo esiste)
+
+(is-graph 'g-inesistente)
+;;; => NIL  (il grafo non esiste)
+
+;;; ============================================================
+;;; BLOCCO 2: new-vertex
+;;; ============================================================
+
+(new-vertex 'g1 'a)
+;;; => (VERTEX G1 A)
+
+(new-vertex 'g1 'b)
+;;; => (VERTEX G1 B)
+
+(new-vertex 'g1 'c)
+;;; => (VERTEX G1 C)
+
+(new-vertex 'g1 'a)
+;;; => (VERTEX G1 A)  (idempotente: non duplica)
+
+;;; new-vertex su grafo inesistente -> crea il grafo automaticamente
+(new-vertex 'g-auto 'x)
+;;; => (VERTEX G-AUTO X)
+
+(is-graph 'g-auto)
+;;; => G-AUTO  (il grafo e' stato creato)
+
+;;; ============================================================
+;;; BLOCCO 3: graph-vertices
+;;; ============================================================
+
+(graph-vertices 'g1)
+;;; => ((VERTEX G1 C) (VERTEX G1 B) (VERTEX G1 A))
+;;; Nota: l'ordine puo' variare (hash table non ordinata)
+;;;       ma devono esserci esattamente 3 elementi
+
+(length (graph-vertices 'g1))
+;;; => 3
+
+(graph-vertices 'g2)
+;;; => NIL  (nessun vertice aggiunto a g2)
+
+(graph-vertices 'g-inesistente)
+;;; => NIL
+
+;;; ============================================================
+;;; BLOCCO 4: new-arc - casi base
+;;; ============================================================
+
+;;; peso di default (1)
+(new-arc 'g1 'a 'b)
+;;; => (ARC G1 A B 1)
+
+;;; peso intero esplicito
+(new-arc 'g1 'b 'c 5)
+;;; => (ARC G1 B C 5)
+
+;;; peso float
+(new-arc 'g1 'a 'c 3.7)
+;;; => (ARC G1 A C 3.7)
+
+;;; ============================================================
+;;; BLOCCO 5: new-arc - creazione automatica di vertici
+;;; ============================================================
+
+;;; 'd non esiste in g1 -> viene creato automaticamente
+(new-arc 'g1 'c 'd 2)
+;;; => (ARC G1 C D 2)
+
+(member (list 'vertex 'g1 'd) (graph-vertices 'g1) :test #'equal)
+;;; => ((VERTEX G1 D))  (d e' stato creato)
+
+;;; new-arc su grafo inesistente -> crea grafo e vertici
+(new-arc 'g-new 'p 'q 10)
+;;; => (ARC G-NEW P Q 10)
+
+(is-graph 'g-new)
+;;; => G-NEW
+
+(length (graph-vertices 'g-new))
+;;; => 2  (p e q creati automaticamente)
+
+;;; ============================================================
+;;; BLOCCO 6: new-arc - sostituzione peso esistente
+;;; ============================================================
+
+(new-arc 'g1 'a 'b)
+;;; => (ARC G1 A B 1)  (arco gia' presente con peso 1)
+
+(new-arc 'g1 'a 'b 99)
+;;; => (ARC G1 A B 99)  (peso aggiornato)
+
+;;; verifica che il peso sia effettivamente cambiato
+(graph-vertex-neighbors 'g1 'a)
+;;; => contiene (ARC G1 A B 99) e (ARC G1 A C 3.7)
+;;;    NON deve comparire (ARC G1 A B 1)
+
+(member (list 'arc 'g1 'a 'b 1) (graph-arcs 'g1) :test #'equal)
+;;; => NIL  (il vecchio arco con peso 1 non esiste piu')
+
+(member (list 'arc 'g1 'a 'b 99) (graph-arcs 'g1) :test #'equal)
+;;; => ((ARC G1 A B 99))  (il nuovo arco con peso 99 esiste)
+
+;;; ============================================================
+;;; BLOCCO 7: graph-arcs
+;;; ============================================================
+
+(length (graph-arcs 'g1))
+;;; => 4  (a->b, b->c, a->c, c->d)
+
+(graph-arcs 'g2)
+;;; => NIL
+
+;;; ============================================================
+;;; BLOCCO 8: graph-vertex-neighbors
+;;; ============================================================
+
+(graph-vertex-neighbors 'g1 'a)
+;;; => lista con (ARC G1 A B 99) e (ARC G1 A C 3.7)
+;;;    esattamente 2 elementi
+
+(length (graph-vertex-neighbors 'g1 'a))
+;;; => 2
+
+(graph-vertex-neighbors 'g1 'b)
+;;; => ((ARC G1 B C 5))  esattamente 1 elemento
+
+(graph-vertex-neighbors 'g1 'd)
+;;; => NIL  (d non ha archi uscenti)
+
+(graph-vertex-neighbors 'g1 'z)
+;;; => NIL  (z non esiste nel grafo)
+
+(graph-vertex-neighbors 'g-inesistente 'a)
+;;; => NIL
+
+;;; ============================================================
+;;; BLOCCO 9: isolamento tra grafi
+;;; ============================================================
+
+(new-arc 'g2 'x 'y 7)
+;;; => (ARC G2 X Y 7)
+
+(graph-vertex-neighbors 'g1 'x)
+;;; => NIL  (x esiste solo in g2, non in g1)
+
+(graph-vertex-neighbors 'g2 'a)
+;;; => NIL  (a esiste solo in g1, non in g2)
+
+(length (graph-arcs 'g2))
+;;; => 1
+
+;;; ============================================================
+;;; BLOCCO 10: delete-graph
+;;; ============================================================
+
+(delete-graph 'g1)
+;;; => NIL
+
+(is-graph 'g1)
+;;; => NIL  (il grafo e' stato rimosso)
+
+(graph-vertices 'g1)
+;;; => NIL  (nessun vertice rimasto)
+
+(graph-arcs 'g1)
+;;; => NIL  (nessun arco rimasto)
+
+;;; g2 non deve essere stato toccato
+(is-graph 'g2)
+;;; => G2
+
+(length (graph-arcs 'g2))
+;;; => 1  (invariato)
+
+;;; delete-graph su grafo inesistente -> non crasha
+(delete-graph 'g-inesistente)
+;;; => NIL
+
+;;; ============================================================
+;;; BLOCCO 11: graph-print (output visivo)
+;;; ============================================================
+
+(new-graph 'g-print)
+(new-arc 'g-print 'm 'n 4)
+(new-arc 'g-print 'n 'o 2.0)
+
+(graph-print 'g-print)
+;;; Stampa su console qualcosa del tipo:
+;;;
+;;; Graph: G-PRINT
+;;; Vertices: ((VERTEX G-PRINT O) (VERTEX G-PRINT N) (VERTEX G-PRINT M))
+;;; Arcs: ((ARC G-PRINT N O 2.0) (ARC G-PRINT M N 4))
+;;;
+;;; => T
+
+;;; ============================================================
+;;; BLOCCO 12: caso limite - grafo con self-loop
+;;; ============================================================
+
+(new-arc 'g2 'x 'x 0)
+;;; => (ARC G2 X X 0)
+
+(member (list 'arc 'g2 'x 'x 0) (graph-arcs 'g2) :test #'equal)
+;;; => ((ARC G2 X X 0))

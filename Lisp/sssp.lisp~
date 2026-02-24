@@ -1,0 +1,87 @@
+;HASH TABLES
+(defparameter *graphs* (make-hash-table :test #'equal)) ;variabile globale che contiene tutti i grafi creati
+(defparameter *vertices* (make-hash-table :test #'equal)) ;variabile globale che contiene tutti i vertici di tutti grafi
+(defparameter *arcs* (make-hash-table :test #'equal)) ;variabile globale che contiene gli archi
+
+;FUNZIONI PER I GRAFI
+(defun is-graph (graph-id) ;controlla se un grafo esiste
+  (gethash graph-id *graphs*)) ;se esiste ritorna graph-id, altrimenti NIL ;gethash cerca la chiave nella hash table
+
+(defun new-graph (graph-id) ;se il grafo non esiste, lo crea e lo inserisce in graphs
+  (or (gethash graph-id *graphs*) ;altrimenti ritorna graph-id
+      (setf (gethash graph-id *graphs*) graph-id)))
+
+(defun delete-graph (graph-id) ;elimina completamente un grafo
+  (remhash graph-id *graphs*) ;rimuove il grafo dalla hash table
+
+  (maphash ;elimina i vertici appartenenti al grafo da eliminare ;maphash itera su tutta la hash table
+   (lambda (key value)
+     (when (and (equal (first key) 'vertex)
+                (equal (second key) graph-id))
+       (remhash key *vertices*)))
+   *vertices*)
+
+  (maphash ;elimina gli archi appartenenti al grafo da eliminare
+   (lambda (key value)
+     (when (and (equal (first key) 'arc)
+                (equal (second key) graph-id))
+       (remhash key *arcs*)))
+   *arcs*)
+
+  nil) ;ritorna NIL
+
+;VERTICI
+(defun new-vertex (graph-id vertex-id) ;aggiunge un vertice
+  (unless (is-graph graph-id)
+    (error "Graph ~S does not exist." graph-id)) ;controlla se il grafo non esiste, se non esiste ritorna errore
+  (setf (gethash (list 'vertex graph-id vertex-id)
+                 *vertices*)
+        (list 'vertex graph-id vertex-id))) ;altrimenti, inserisce il vertice
+
+(defun graph-vertices (graph-id) ;ritorna tutti i vertici del grafo
+  (let (result)
+    (maphash
+     (lambda (key value)
+       (when (and (equal (first key) 'vertex)
+                  (equal (second key) graph-id))
+         (push value result)))
+     *vertices*)
+    result))
+
+;ARCHI
+(defun new-arc (graph-id u v &optional (weight 1)) ;aggiunge un arco
+  (unless (is-graph graph-id)
+    (error "Graph ~S does not exist." graph-id)) ;controlla se il grafo esiste, se non esiste ritorna errore
+  (setf (gethash (list 'arc graph-id u v)
+                 *arcs*)
+        (list 'arc graph-id u v weight))) ;altrimenti, inserisce l'arco
+
+(defun graph-arcs (graph-id) ;ritorna tutti gli arhi del grafo 
+  (let (result)
+    (maphash
+     (lambda (key value)
+       (when (and (equal (first key) 'arc)
+                  (equal (second key) graph-id))
+         (push value result)))
+     *arcs*)
+    result))
+
+(defun graph-vertex-neighbors (graph-id vertex-id) ;restituisce tutti gli archi uscenti da un vertice
+  (let (result)
+    (maphash
+     (lambda (key value)
+       (when (and (equal (first key) 'arc)
+                  (equal (second key) graph-id)
+                  (equal (third key) vertex-id))
+         (push value result)))
+     *arcs*)
+    result))
+
+;STAMPA
+(defun graph-print (graph-id) ;stampa il grafo
+  (format t "~%Graph: ~S~%" graph-id)
+  (format t "Vertices: ~S~%" (graph-vertices graph-id))
+  (format t "Arcs: ~S~%" (graph-arcs graph-id))
+  t) ;stampa di T per corretta esecuzione
+
+;ciao
