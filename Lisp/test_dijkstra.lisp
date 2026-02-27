@@ -1,0 +1,167 @@
+(load "sssp.lisp")
+
+(defun test-dijkstra-small ()
+  "Test con il grafo classico di Dijkstra (CLR Fig. 24.6).
+   Grafo diretto con vertici: s, t, x, y, z
+   Archi:
+     s->t 10, s->y 5
+     t->x 1,  t->y 2
+     x->z 4
+     y->t 3,  y->x 9,  y->z 2
+     z->s 7,  z->x 6"
+  (format t "~%=== TEST DIJKSTRA PICCOLO ===~%")
+  (new-graph 'g-small)
+  (new-arc 'g-small 's 't 10)
+  (new-arc 'g-small 's 'y 5)
+  (new-arc 'g-small 't 'x 1)
+  (new-arc 'g-small 't 'y 2)
+  (new-arc 'g-small 'x 'z 4)
+  (new-arc 'g-small 'y 't 3)
+  (new-arc 'g-small 'y 'x 9)
+  (new-arc 'g-small 'y 'z 2)
+  (new-arc 'g-small 'z 's 7)
+  (new-arc 'g-small 'z 'x 6)
+
+  (sssp-dijkstra 'g-small 's)
+
+  (format t "Distanze da S:~%")
+  (format t "  dist(s) = ~A (atteso: 0)~%" (sssp-dist 'g-small 's))
+  (format t "  dist(t) = ~A (atteso: 8)~%" (sssp-dist 'g-small 't))
+  (format t "  dist(x) = ~A (atteso: 9)~%" (sssp-dist 'g-small 'x))
+  (format t "  dist(y) = ~A (atteso: 5)~%" (sssp-dist 'g-small 'y))
+  (format t "  dist(z) = ~A (atteso: 7)~%" (sssp-dist 'g-small 'z))
+
+  (format t "~%Cammino minimo da S a X:~%")
+  (format t "  ~A~%" (sssp-shortest-path 'g-small 's 'x))
+  (format t "  (atteso: (arc g-small s y 5) (arc g-small y t 3) (arc g-small t x 1))~%")
+
+  (format t "~%Cammino minimo da S a Z:~%")
+  (format t "  ~A~%" (sssp-shortest-path 'g-small 's 'z))
+  (format t "  (atteso: (arc g-small s y 5) (arc g-small y z 2))~%"))
+
+;;; ============================================================
+;;; TEST SU GRAFO CON PESI FLOAT
+;;; ============================================================
+
+(defun test-dijkstra-float ()
+  "Test con pesi float."
+  (format t "~%=== TEST DIJKSTRA FLOAT ===~%")
+  (new-graph 'g-float)
+  (new-arc 'g-float 'a 'b 1.5)
+  (new-arc 'g-float 'a 'c 4.2)
+  (new-arc 'g-float 'b 'c 2.1)
+  (new-arc 'g-float 'b 'd 3.0)
+  (new-arc 'g-float 'c 'd 0.5)
+
+  (sssp-dijkstra 'g-float 'a)
+
+  (format t "Distanze da A:~%")
+  (format t "  dist(a) = ~A (atteso: 0)~%" (sssp-dist 'g-float 'a))
+  (format t "  dist(b) = ~A (atteso: 1.5)~%" (sssp-dist 'g-float 'b))
+  (format t "  dist(c) = ~A (atteso: 3.6)~%" (sssp-dist 'g-float 'c))
+  (format t "  dist(d) = ~A (atteso: 4.1)~%" (sssp-dist 'g-float 'd))
+
+  (format t "~%Cammino minimo da A a D:~%")
+  (format t "  ~A~%" (sssp-shortest-path 'g-float 'a 'd)))
+
+;;; ============================================================
+;;; TEST CASO LIMITE: VERTICE NON RAGGIUNGIBILE
+;;; ============================================================
+
+(defun test-dijkstra-unreachable ()
+  "Test con un vertice non raggiungibile dalla sorgente."
+  (format t "~%=== TEST VERTICE NON RAGGIUNGIBILE ===~%")
+  (new-graph 'g-unreach)
+  (new-arc 'g-unreach 'a 'b 3)
+  (new-arc 'g-unreach 'a 'c 1)
+  (new-vertex 'g-unreach 'isolated) ; vertice isolato
+
+  (sssp-dijkstra 'g-unreach 'a)
+
+  (format t "dist(a) = ~A (atteso: 0)~%" (sssp-dist 'g-unreach 'a))
+  (format t "dist(b) = ~A (atteso: 3)~%" (sssp-dist 'g-unreach 'b))
+  (format t "dist(c) = ~A (atteso: 1)~%" (sssp-dist 'g-unreach 'c))
+  (format t "Cammino a->isolated: ~A (atteso: NIL)~%"
+          (sssp-shortest-path 'g-unreach 'a 'isolated)))
+
+;;; ============================================================
+;;; TEST CASO LIMITE: GRAFO CON UN SOLO NODO
+;;; ============================================================
+
+(defun test-dijkstra-single-node ()
+  "Test con un grafo con un solo vertice."
+  (format t "~%=== TEST GRAFO SINGOLO NODO ===~%")
+  (new-graph 'g-single)
+  (new-vertex 'g-single 'only)
+
+  (sssp-dijkstra 'g-single 'only)
+
+  (format t "dist(only) = ~A (atteso: 0)~%" (sssp-dist 'g-single 'only))
+  (format t "Cammino only->only: ~A (atteso: NIL)~%"
+          (sssp-shortest-path 'g-single 'only 'only)))
+
+;;; ============================================================
+;;; TEST GRAFO CASUALE
+;;; ============================================================
+
+(defun generate-random-graph (graph-id num-vertices num-arcs max-weight)
+  "Genera un grafo casuale con num-vertices vertici e num-arcs archi."
+  (new-graph graph-id)
+  (let ((vertex-names (generate-vertex-names num-vertices)))
+    (mapcar (lambda (v) (new-vertex graph-id v)) vertex-names)
+    (generate-random-arcs graph-id vertex-names num-arcs max-weight 0)
+    vertex-names))
+
+(defun generate-vertex-names (n)
+  "Genera una lista di n nomi di vertici: V0, V1, ..., Vn-1."
+  (generate-vertex-names-helper n 0))
+
+(defun generate-vertex-names-helper (n i)
+  (if (= i n)
+      nil
+      (cons (intern (format nil "V~A" i))
+            (generate-vertex-names-helper n (1+ i)))))
+
+(defun generate-random-arcs (graph-id vertices num-arcs max-weight count)
+  "Genera num-arcs archi casuali nel grafo."
+  (if (= count num-arcs)
+      nil
+      (let* ((n (length vertices))
+             (u (nth (random n) vertices))
+             (v (nth (random n) vertices))
+             (w (+ 1 (random max-weight))))
+        (unless (equal u v)
+          (new-arc graph-id u v w))
+        (generate-random-arcs graph-id vertices num-arcs max-weight (1+ count)))))
+
+(defun test-dijkstra-random ()
+  "Test con un grafo casuale."
+  (format t "~%=== TEST GRAFO CASUALE ===~%")
+  (let* ((graph-id 'g-random)
+         (vertices (generate-random-graph graph-id 8 15 20))
+         (source (car vertices)))
+    (format t "Grafo ~A con ~A vertici, sorgente: ~A~%"
+            graph-id (length vertices) source)
+    (sssp-dijkstra graph-id source)
+    (format t "Distanze da ~A:~%" source)
+    (mapcar (lambda (v)
+              (let ((d (sssp-dist graph-id v)))
+                (format t "  dist(~A) = ~A~%"
+                        v
+                        (if (= d most-positive-fixnum) "INF" d))))
+            vertices)))
+
+;;; ============================================================
+;;; FUNZIONE PER ESEGUIRE TUTTI I TEST
+;;; ============================================================
+
+(defun run-all-dijkstra-tests ()
+  "Esegue tutti i test di Dijkstra."
+  (test-dijkstra-small)
+  (test-dijkstra-float)
+  (test-dijkstra-unreachable)
+  (test-dijkstra-single-node)
+  (test-dijkstra-random)
+  (format t "~%=== TUTTI I TEST COMPLETATI ===~%"))
+
+(run-all-dijkstra-tests)
